@@ -245,6 +245,48 @@ end
 
 
 
+---Returns the index of the first occurence of the provided value in the list, or `nil` if the value has not been found.
+---@param t table The list to be checked.
+---@param v any The value to be checked. The function will return `true` if this value is inside the `t` table.
+---@return number?
+function utils.findValueInList(t, v)
+	for i, n in ipairs(t) do
+		if n == v then
+			return i
+		end
+	end
+	return nil
+end
+
+
+
+---Removes all occurences of the provided value from the provided table.
+---If you have a list and want the indices of the remaining entries to be updated, use `utils.removeValueFromList()` instead.
+---@param t table The table from which the value should be deleted.
+---@param v any The value to be removed.
+function utils.removeValueFromTable(t, v)
+	for i, n in pairs(t) do
+		if n == v then
+			t[i] = nil
+		end
+	end
+end
+
+
+
+---Removes all occurences of the provided value from the provided list.
+---@param t table The list from which the value should be deleted.
+---@param v any The value to be removed.
+function utils.removeValueFromList(t, v)
+	for i = #t, 1, -1 do
+		if t[i] == v then
+			table.remove(t, i)
+		end
+	end
+end
+
+
+
 ---Returns an index of the provided weight list, randomly picked from that list.
 ---For example, providing `{1, 2, 3}` will return `0` 1/6 of the time, `1` 2/6 of the time and `2` 3/6 of the time.
 ---@param weights table A list of integers, which depict the weights.

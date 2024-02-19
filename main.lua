@@ -5,22 +5,33 @@ _Utils = require("utils")
 
 _COLORS = {
 	white = {1, 1, 1},
+	gray = {0.5, 0.5, 0.5},
+	lightGray = {0.8, 0.8, 0.8},
 	black = {0, 0, 0}
 }
 _IMAGES = {
 	desktop = love.graphics.newImage("images/desktop.png"),
 	window = love.graphics.newImage("images/window.png"),
+	windowDisabled = love.graphics.newImage("images/window_disabled.png"),
 	button = love.graphics.newImage("images/button.png"),
+	buttonPressed = love.graphics.newImage("images/button_pressed.png"),
 	close = love.graphics.newImage("images/close.png"),
-	minimize = love.graphics.newImage("images/minimize.png")
+	closePressed = love.graphics.newImage("images/close_pressed.png"),
+	closeDisabled = love.graphics.newImage("images/close_disabled.png"),
+	minimize = love.graphics.newImage("images/minimize.png"),
+	minimizePressed = love.graphics.newImage("images/minimize_pressed.png"),
+	minimizeDisabled = love.graphics.newImage("images/minimize_disabled.png")
 }
 _SPRITES = {
 	window = NineSprite(_IMAGES.window, 5, 95, 33, 95),
-	button = NineSprite(_IMAGES.button, 4, 44, 4, 12)
+	windowDisabled = NineSprite(_IMAGES.windowDisabled, 5, 95, 33, 95),
+	button = NineSprite(_IMAGES.button, 4, 44, 4, 12),
+	buttonPressed = NineSprite(_IMAGES.buttonPressed, 4, 44, 4, 12)
 }
 _FONTS = {
 	windowHeader = love.graphics.newFont("fonts/Lambda-Regular.ttf", 24),
 	windowContents = love.graphics.newFont("fonts/EnterCommand.ttf", 24),
+	windowContentsBold = love.graphics.newFont("fonts/EnterCommand-Bold.ttf", 24),
 	fontI = love.graphics.newFont("fonts/Lambda-Italic.ttf", 28)
 }
 

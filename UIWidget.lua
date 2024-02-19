@@ -20,24 +20,49 @@ function UIWidget:new(data)
 
     -- Images only
     self.image = data.image
+    self.imagePressed = data.imagePressed
+    self.imageUnfocused = data.imageUnfocused
 
     -- Sprites only
     self.sprite = data.sprite
+    self.spritePressed = data.spritePressed
+    self.spriteUnfocused = data.spriteUnfocused
     self.draggable = data.draggable
     self.dragMaxY = data.dragMaxY
+    self.focusMovesToFront = data.focusMovesToFront
 
     -- Text only
     self.text = data.text
     self.font = data.font
     self.color = data.color
+    self.colorUnfocused = data.colorUnfocused
     self.shadow = data.shadow
+    self.lineWidth = data.lineWidth
+    self.lineSquish = data.lineSquish
+
+    -- Callbacks
+    self.onPressed = data.onPressed
 
     -- State
+    self.focused = false
+    self.pressed = false
     self.isBeingDragged = false
+    self.dragOffset = nil
 
     -- Cache (set to nil to regenerate the value the next time it's needed)
     self.globalPos = nil
     self.globalSize = nil
+end
+
+
+
+function UIWidget:getChild(name)
+    for i, child in ipairs(self.children) do
+        if child.name == name then
+            return child
+        end
+    end
+    return nil
 end
 
 
@@ -87,7 +112,7 @@ function UIWidget:getGlobalSize()
     elseif self.type == "image" then
         self.globalSize = {x = self.image:getWidth(), y = self.image:getHeight()}
     elseif self.type == "text" then
-        self.globalSize = {x = self.font:getWidth(self.text), y = self.font:getHeight() * #_Utils.strSplit(self.text, "\n")}
+        self.globalSize = _Game:getTextSize(self.text, self.font, self.lineWidth, self.lineSquish)
     else
         self.globalSize = self.parent:getGlobalSize()
     end
@@ -112,10 +137,61 @@ end
 
 
 
+function UIWidget:setFocus(focus)
+    self.focused = focus
+    if focus and self.focusMovesToFront and self.parent then
+        self:moveToFront()
+    end
+    for i, child in ipairs(self.children) do
+        child:setFocus(focus)
+    end
+end
+
+
+
+function UIWidget:moveToFront()
+    assert(self.parent, "Why would you want to move a root node to the front? (or perhaps a node that isn't attached to the tree?)")
+    _Utils.removeValueFromList(self.parent.children, self)
+    table.insert(self.parent.children, self)
+    _Game.ui:generateDebugWidgetTree()
+end
+
+
+
+function UIWidget:close()
+    _Utils.removeValueFromList(self.parent.children, self)
+    _Game.ui:generateDebugWidgetTree()
+end
+
+
+
 function UIWidget:isHovered()
     local p = self:getGlobalPos()
     local s = self:getGlobalSize()
     return _MouseX >= p.x and _MouseY >= p.y and _MouseX <= p.x + s.x and _MouseY <= p.y + s.y
+end
+
+
+
+function UIWidget:getFrontmostHoveredChild()
+    -- We're starting from the last child, as that's the last child to be drawn = is on the front.
+    for i = #self.children, 1, -1 do
+        if self.children[i]:isHovered() then
+            return self.children[i]
+        end
+    end
+    return nil
+end
+
+
+
+function UIWidget:findIndirectParentThatIsAChildOf(widget)
+    -- For example, if we're a button, and we pass the whole desktop, what we'll get is the window which hosts that button.
+    local w = self
+    while w and w.parent ~= widget do
+        w = w.parent
+    end
+    return w
 end
 
 
@@ -125,17 +201,38 @@ function UIWidget:draw()
 
     love.graphics.setColor(1, 1, 1)
     if self.type == "image" then
-        love.graphics.draw(self.image, p.x, p.y)
+        local image = self.image
+        -- Replace the image with a pressed version if it exists.
+        if self.pressed and self:isHovered() then
+            image = self.imagePressed or image
+        elseif not self.focused then
+            image = self.imageUnfocused or image
+        end
+        love.graphics.draw(image, p.x, p.y)
     elseif self.type == "sprite" then
-        self.sprite:draw(p.x, p.y, self.size.x, self.size.y)
+        local sprite = self.sprite
+        -- Replace the sprite with a pressed version if it exists.
+        if self.pressed and self:isHovered() then
+            sprite = self.spritePressed or sprite
+        elseif not self.focused then
+            sprite = self.spriteUnfocused or sprite
+        end
+        sprite:draw(p.x, p.y, self.size.x, self.size.y)
     elseif self.type == "text" then
-        _Game:drawText(self.text, p.x, p.y, self.font, self.color, self.shadow)
+        local color = self.color
+        if not self.focused then
+            color = self.colorUnfocused or color
+        end
+        local horizontalAlign = 0
+        if self.align then
+            horizontalAlign = self.align.x
+        end
+        local s = self:getGlobalSize()
+        _Game:drawText(self.text, p.x + horizontalAlign * s.x, p.y, self.font, color, self.shadow, horizontalAlign, self.lineWidth, self.lineSquish)
     end
 
-    if self.children then
-        for i, child in ipairs(self.children) do
-            child:draw()
-        end
+    for i, child in ipairs(self.children) do
+        child:draw()
     end
 end
 
@@ -152,16 +249,39 @@ end
 
 
 function UIWidget:mousepressed(x, y, button)
-    if self.draggable and button == 1 and self:isHovered() and (not self.dragMaxY or y - self:getGlobalPos().y <= self.dragMaxY) then
-        self.isBeingDragged = true
+    if button == 1 and self:isHovered() then
+        self.pressed = true
+        if self.draggable and (not self.dragMaxY or y - self:getGlobalPos().y <= self.dragMaxY) then
+            self.isBeingDragged = true
+            self.dragOffset = {x = _MouseX - self.pos.x, y = _MouseY - self.pos.y}
+        end
+    end
+
+    for i, child in ipairs(self.children) do
+        child:setFocus(false)
+    end
+    local widget = self:getFrontmostHoveredChild()
+    if widget then
+        widget:mousepressed(x, y, button)
+        widget:setFocus(true)
     end
 end
 
 
 
 function UIWidget:mousereleased(x, y, button)
-    if self.isBeingDragged and button == 1 then
+    if button == 1 then
+        if self.pressed then
+            self.pressed = false
+            if self.onPressed and self:isHovered() then
+                _Game.ui:onEvent(self, self.onPressed)
+            end
+        end
         self.isBeingDragged = false
+    end
+
+    for i, child in ipairs(self.children) do
+        child:mousereleased(x, y, button)
     end
 end
 
@@ -169,7 +289,11 @@ end
 
 function UIWidget:mousemoved(x, y, dx, dy)
     if self.isBeingDragged then
-        self:setPos({x = self.pos.x + dx, y = self.pos.y + dy})
+        self:setPos({x = _MouseX - self.dragOffset.x, y = _MouseY - self.dragOffset.y})
+    end
+
+    for i, child in ipairs(self.children) do
+        child:mousemoved(x, y, dx, dy)
     end
 end
 
