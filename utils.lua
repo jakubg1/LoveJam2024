@@ -1,5 +1,5 @@
 -- utils.lua by jakubg1
--- version for Love Jam 2024 (OpenSMCE with Colors removed)
+-- version for Love Jam 2024 (OpenSMCE with Colors removed and Vec2 functions added)
 
 local json = require("json")
 
@@ -496,6 +496,18 @@ function utils.jsonBeautify(s)
 	ret = ret .. ln .. "\n"
 
 	return ret
+end
+
+
+
+---Returns `true` if the given position is inside of a box of given position and size.
+---If the point lies anywhere on the box's edge, the check will still pass.
+---@param p Vector2 The point which is checked against.
+---@param bp Vector2 The position of the upper left corner of the box.
+---@param bs Vector2 The size of the box.
+---@return boolean
+function utils.isPointInsideBox(p, bp, bs)
+	return p.x >= bp.x and p.y >= bp.y and p.x <= (bp.x + bs.x) and p.y <= (bp.y + bs.y)
 end
 
 

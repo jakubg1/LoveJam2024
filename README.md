@@ -1,4 +1,6 @@
-This is a work in progress game!
+This is a failed attempt at making a game based on UI for the LOVE2D Game Jam 2024.
+
+While I won't be working on the game, I will still treat this repository as a sandbox for shaping up a potential UI library, so work will happen from time to time.
 
 ## Credits
 

@@ -3,6 +3,7 @@ local class = require "class"
 local Game = class:derive("Game")
 
 -- Place your imports here
+local Vec2 = require("Vector2")
 local UI = require("UI")
 
 
@@ -65,7 +66,7 @@ end
 
 function Game:getTextSize(text, font, maxWidth, lineSquish)
     local lines = self:splitIntoLines(text, font, maxWidth)
-    local size = {x = 0, y = font:getHeight() * ((#lines - 1) * (1 - (lineSquish or 0)) + 1)}
+    local size = Vec2(0, font:getHeight() * ((#lines - 1) * (1 - (lineSquish or 0)) + 1))
     for i, line in ipairs(lines) do
         size.x = math.max(size.x, font:getWidth(line))
     end

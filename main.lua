@@ -1,3 +1,4 @@
+local Vec2 = require("Vector2")
 local Game = require("Game")
 local NineSprite = require("NineSprite")
 
@@ -7,7 +8,8 @@ _COLORS = {
 	white = {1, 1, 1},
 	gray = {0.5, 0.5, 0.5},
 	lightGray = {0.8, 0.8, 0.8},
-	black = {0, 0, 0}
+	black = {0, 0, 0},
+	red = {1, 0, 0}
 }
 _IMAGES = {
 	desktop = love.graphics.newImage("images/desktop.png"),
@@ -37,8 +39,7 @@ _FONTS = {
 
 _Game = nil
 
-_MouseX = 0
-_MouseY = 0
+_MousePos = Vec2()
 
 
 
@@ -49,8 +50,7 @@ end
 
 
 function love.update(dt)
-	_MouseX = love.mouse.getX()
-	_MouseY = love.mouse.getY()
+	_MousePos = Vec2(love.mouse.getPosition())
 	_Game:update(dt)
 end
 

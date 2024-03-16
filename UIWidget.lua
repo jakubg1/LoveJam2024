@@ -3,6 +3,7 @@ local class = require "class"
 local UIWidget = class:derive("UIWidget")
 
 -- Place your imports here
+local Vec2 = require("Vector2")
 
 
 
@@ -80,22 +81,22 @@ function UIWidget:getGlobalPos()
     end
     -- No cache available, (re)generate.
     if self.parent then
-        local p = self.parent:getGlobalPos()
-        local x = p.x + self.pos.x
-        local y = p.y + self.pos.y
+        local pp = self.parent:getGlobalPos()
+        local p = pp:clone()
+        if self.pos then
+            p = p + self.pos
+        end
         if self.align then
             local s = self:getGlobalSize()
-            x = x - math.floor(s.x * self.align.x)
-            y = y - math.floor(s.y * self.align.y)
+            p = p - (s * self.align):floor()
         end
         if self.parentAlign then
             local s = self.parent:getGlobalSize()
-            x = x + math.floor(s.x * self.parentAlign.x)
-            y = y + math.floor(s.y * self.parentAlign.y)
+            p = p + (s * self.parentAlign):floor()
         end
-        self.globalPos = {x = x, y = y}
+        self.globalPos = p
     else
-        self.globalPos = self.pos
+        self.globalPos = self.pos or Vec2()
     end
     return self.globalPos
 end
@@ -110,7 +111,7 @@ function UIWidget:getGlobalSize()
     if self.size then
         self.globalSize = self.size
     elseif self.type == "image" then
-        self.globalSize = {x = self.image:getWidth(), y = self.image:getHeight()}
+        self.globalSize = Vec2(self.image:getWidth(), self.image:getHeight())
     elseif self.type == "text" then
         self.globalSize = _Game:getTextSize(self.text, self.font, self.lineWidth, self.lineSquish)
     else
@@ -166,9 +167,7 @@ end
 
 
 function UIWidget:isHovered()
-    local p = self:getGlobalPos()
-    local s = self:getGlobalSize()
-    return _MouseX >= p.x and _MouseY >= p.y and _MouseX <= p.x + s.x and _MouseY <= p.y + s.y
+    return _Utils.isPointInsideBox(_MousePos, self:getGlobalPos(), self:getGlobalSize())
 end
 
 
@@ -238,12 +237,61 @@ end
 
 
 
+function UIWidget:getDebugText()
+    return string.format("%s (%s)", self.name or "<unnamed>", self.type or "none")
+end
+
+
+
 function UIWidget:drawDebug()
+    -- Explanation of debug controls:
+    -- This Widget's box (pos and size) is marked in orange.
+    -- The alignment pivot will be marked as an red plus.
+    -- The darker outline colors pixels which are JUST OUTSIDE of its box!
+    -- If this Widget has a parent-relative alignment set (self.parentAlign):
+    --   - the parent's box will be drawn in aqua,
+    --   - the parent-relative pivot will be marked as a blue plus.
+
+    -- Draw parent's alignment helpers if applicable.
+    if self.parentAlign then
+        -- Draw parent's box.
+        local pp = self.parent:getGlobalPos()
+        local ps = self.parent:getGlobalSize()
+        love.graphics.setColor(0, 1, 1, 0.25)
+        love.graphics.rectangle("fill", pp.x, pp.y, ps.x, ps.y)
+        love.graphics.setColor(0, 1, 1, 0.5)
+        love.graphics.rectangle("line", pp.x - 0.5, pp.y - 0.5, ps.x + 1, ps.y + 1)
+        -- Draw parent-relative pivot point.
+        local x = pp.x + math.floor(ps.x * self.parentAlign.x)
+        local y = pp.y + math.floor(ps.y * self.parentAlign.y)
+        love.graphics.setColor(0, 0, 1)
+        love.graphics.line(x + 0.5, y - 4.5, x + 0.5, y + 5.5)
+        love.graphics.line(x - 4.5, y + 0.5, x + 5.5, y + 0.5)
+    elseif self.parent then
+        -- Draw parent-relative pivot point.
+        local pp = self.parent:getGlobalPos()
+        love.graphics.setColor(0, 0, 1)
+        love.graphics.line(pp.x + 0.5, pp.y - 4.5, pp.x + 0.5, pp.y + 5.5)
+        love.graphics.line(pp.x - 4.5, pp.y + 0.5, pp.x + 5.5, pp.y + 0.5)
+    end
+
+    -- Draw this box.
     local p = self:getGlobalPos()
     local s = self:getGlobalSize()
 
-    love.graphics.setColor(1, 0, 0, 0.5)
+    love.graphics.setColor(1, 0.5, 0, 0.5)
     love.graphics.rectangle("fill", p.x, p.y, s.x, s.y)
+    love.graphics.setColor(1, 0.5, 0)
+    love.graphics.rectangle("line", p.x - 0.5, p.y - 0.5, s.x + 1, s.y + 1)
+
+    -- Draw align pivot.
+    local ap = p
+    if self.align then
+        ap = ap + (s * self.align):floor()
+    end
+    love.graphics.setColor(1, 0, 0)
+    love.graphics.line(ap.x + 0.5, ap.y - 4.5, ap.x + 0.5, ap.y + 5.5)
+    love.graphics.line(ap.x - 4.5, ap.y + 0.5, ap.x + 5.5, ap.y + 0.5)
 end
 
 
@@ -253,7 +301,7 @@ function UIWidget:mousepressed(x, y, button)
         self.pressed = true
         if self.draggable and (not self.dragMaxY or y - self:getGlobalPos().y <= self.dragMaxY) then
             self.isBeingDragged = true
-            self.dragOffset = {x = _MouseX - self.pos.x, y = _MouseY - self.pos.y}
+            self.dragOffset = _MousePos - self.pos
         end
     end
 
@@ -289,7 +337,7 @@ end
 
 function UIWidget:mousemoved(x, y, dx, dy)
     if self.isBeingDragged then
-        self:setPos({x = _MouseX - self.dragOffset.x, y = _MouseY - self.dragOffset.y})
+        self:setPos(_MousePos - self.dragOffset)
     end
 
     for i, child in ipairs(self.children) do
